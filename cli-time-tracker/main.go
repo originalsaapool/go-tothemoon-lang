@@ -2,8 +2,11 @@
 
 package main
 
-import "fmt"
+import (
+	"cli-time-tracker/cmd"
+)
 
 func main() {
-	fmt.Println("Hi!")
+	cmd.Execute()
+
 }
