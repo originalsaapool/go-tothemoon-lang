@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"cli-time-tracker/internal/domain"
+
 	"github.com/spf13/cobra"
 )
 
@@ -23,26 +25,24 @@ var addCmd = &cobra.Command{
 	Long:  `You can add timer using this command`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		fmt.Println(os.Getwd())
+		// fmt.Println(os.Getwd())
 
 		parentFolderPath := "config"
+		dataFile := "timers.json"
 		err := os.MkdirAll(parentFolderPath, 0750)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		type Timer struct {
-			ID       string        `json:"id"`
-			Start    time.Time     `json:"start"`
-			Duration time.Duration `json:"duration"`
-			End      time.Time     `json:"end"`
-			// ID       string `json: "id"`
-		}
-
-		type TimerDuration struct {
-			Number   int
-			String   string
-			Duration time.Duration
+		_, err = os.Stat(parentFolderPath + "/" + dataFile)
+		if os.IsNotExist(err) {
+			file, err := os.Create(parentFolderPath + "/" + dataFile)
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer file.Close()
+		} else if err != nil {
+			log.Fatal(err)
 		}
 
 		reader := bufio.NewReader(os.Stdin)
@@ -50,7 +50,7 @@ var addCmd = &cobra.Command{
 		result, _ := reader.ReadString('\n')
 		result = strings.TrimSpace(result)
 
-		duration := TimerDuration{String: result}
+		duration := domain.TimerDuration{String: result}
 
 		duration.Number, err = strconv.Atoi(duration.String)
 		if err != nil {
@@ -58,47 +58,45 @@ var addCmd = &cobra.Command{
 		}
 
 		duration.Number = duration.Number * 60
+		duration.String = strconv.Itoa(duration.Number)
 		duration.Duration = time.Duration(duration.Number)
 
-		var timers []Timer
+		var timers []domain.Timer
 
 		id := fmt.Sprintf("%d", time.Now().UnixNano())
-		startTime := time.Now()
-		endTime := startTime.Add(time.Duration(duration.Duration) * time.Second)
+		startTime := time.Now().Format("2006-01-02 15:04:05.999999999 -0700 MST")
+		// endTime := startTime.Add(time.Duration(duration.Duration) * time.Second)
 
-		fmt.Printf("%T", startTime)
-
-		// duration := strconv.Itoa(1500)
-
-		file, err := os.ReadFile(parentFolderPath + "/timers.json")
+		file, err := os.ReadFile(parentFolderPath + "/" + dataFile)
 		if err != nil {
 			log.Fatal(err)
 		}
 
+		//здесь нужно обработать по другому
 		err = json.Unmarshal(file, &timers)
 		if err != nil {
+			fmt.Println("Ошибка десериализации")
 			log.Fatal(err)
 		}
 
-		fmt.Println("Содержимое файла:\n", string(file))
-		fmt.Println(timers)
-
-		newTimer := Timer{
+		newTimer := domain.Timer{
 			ID:       id,
 			Start:    startTime,
-			Duration: duration.Duration,
-			End:      endTime,
+			Duration: duration.String,
+			Status:   "running",
 		}
 
 		timers = append(timers, newTimer)
 
 		data, err := json.MarshalIndent(timers, "", "  ")
 		if err != nil {
+			fmt.Println("Ошибка сериализации")
 			log.Fatal(err)
 		}
 
-		err = os.WriteFile(parentFolderPath+"/timers.json", data, 0644)
+		err = os.WriteFile(parentFolderPath+"/"+dataFile, data, 0644)
 		if err != nil {
+			fmt.Println("Ошибка записи файла")
 			log.Fatal(err)
 		}
 		fmt.Println("The timer has started!")
