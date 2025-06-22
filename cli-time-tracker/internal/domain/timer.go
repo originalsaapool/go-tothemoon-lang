@@ -7,6 +7,7 @@ type Timer struct {
 	Start    string `json:"start"`
 	Duration string `json:"duration"`
 	Status   string `json:"status"`
+	Name     string `json:"name"`
 	// ID       string `json: "id"`
 }
 
