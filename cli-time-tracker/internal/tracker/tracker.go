@@ -11,7 +11,7 @@ import (
 )
 
 type Tracker struct {
-	Timers      []domain.Timer
+	Timers      map[string]*domain.Timer
 	StoragePath string
 }
 
@@ -23,8 +23,6 @@ func NewTracker(filepath string) *Tracker {
 
 func (t *Tracker) Load() error {
 
-	// parentFolderPath := "config"
-	// dataFile := "timers.json"
 	err := os.MkdirAll("config", 0750)
 	if err != nil {
 		log.Fatal(err)
@@ -61,7 +59,7 @@ func (t *Tracker) Load() error {
 			return err
 		}
 
-		err = json.Unmarshal(file, &t.Timers)
+		err = t.UnmarshalJSON(file)
 		if err != nil {
 			return err
 		}
@@ -71,8 +69,36 @@ func (t *Tracker) Load() error {
 
 }
 
+func (t *Tracker) UnmarshalJSON(data []byte) error {
+	// создаем переменную - массив из структуры типа Timer (из domain)
+	var timers []domain.Timer
+	// получаем из файла и декодируем таймеры
+	if err := json.Unmarshal(data, &timers); err != nil {
+		return err
+	}
+	// делаем мапу где ключ имя а значение структура типа Timer
+	t.Timers = make(map[string]*domain.Timer)
+	// проходим по переменной которая содержим струкруы и переписываем данные в мапу чтобы дальше с ней работать
+	for i := range timers {
+		t.Timers[timers[i].Name] = &timers[i]
+	}
+	// теперь таймеры хранятся в мапе
+	return nil
+}
+
+func (t *Tracker) MarshalJSON() ([]byte, error) {
+	// после того как набор таймеров изменен - вытаскиваем данные в срез из мапы
+	timers := make([]domain.Timer, 0, len(t.Timers))
+	for _, tmr := range t.Timers {
+		timers = append(timers, *tmr)
+	}
+	//кодируем полученный срез в json
+	return json.Marshal(timers)
+}
+
 func (t *Tracker) Save() error {
-	data, err := json.MarshalIndent(t.Timers, "", "  ")
+	// data, err := json.MarshalIndent(t.Timers, "", "  ")
+	data, err := t.MarshalJSON()
 	if err != nil {
 		return err
 	}
@@ -109,35 +135,34 @@ func (t *Tracker) AddTimer(name string, minutes string) {
 		Name:     name,
 	}
 
-	t.Timers = append(t.Timers, newTimer)
+	// t.Timers = append(t.Timers, newTimer)
+	t.Timers[newTimer.Name] = &newTimer
 
 	fmt.Println("The timer has started!")
 
 }
 
 func (t *Tracker) Stop(name string) {
-	for i, v := range t.Timers {
-		if v.Name == name {
-			t.Timers[i].Status = "stopped"
-			fmt.Printf("The timer %s has been stopped!\n", name)
-		}
-	}
+
+	t.Timers[name].Status = "stopped"
+	fmt.Printf("The timer %s has been stopped!\n", name)
 }
 
 func (t *Tracker) Status(name string) {
-	for _, v := range t.Timers {
-		if v.Name == name {
-			fmt.Printf("The timer %s is now %s\n", v.Name, v.Status)
-			if v.Status == "running" {
 
-				startTime, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", v.Start)
-				if err != nil {
-					log.Fatal(err)
-				}
-				now := time.Now()
-				diff := now.Sub(startTime).Round(time.Second).String()
-				fmt.Printf("%v from the beggining\n", diff)
+	_, ok := t.Timers[name]
+	if ok {
+		fmt.Printf("The timer %s is now %s\n", t.Timers[name].Name, t.Timers[name].Status)
+		if t.Timers[name].Status == "running" {
+			startTime, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", t.Timers[name].Start)
+			if err != nil {
+				log.Fatal(err)
 			}
+			now := time.Now()
+			diff := now.Sub(startTime).Round(time.Second).String()
+			fmt.Printf("%v from the beggining\n", diff)
 		}
+	} else {
+		fmt.Println("The timer is not found")
 	}
 }
