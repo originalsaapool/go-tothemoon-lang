@@ -17,6 +17,7 @@ type Tracker struct {
 
 func NewTracker(filepath string) *Tracker {
 	return &Tracker{
+		Timers:      make(map[string]*domain.Timer),
 		StoragePath: filepath,
 	}
 }
