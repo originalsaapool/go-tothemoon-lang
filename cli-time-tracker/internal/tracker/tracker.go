@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"time"
 )
 
@@ -37,7 +36,7 @@ func (t *Tracker) Load() error {
 			return err
 		}
 
-		data, err := json.MarshalIndent("[]", "", "  ")
+		data, err := json.Marshal("[]")
 		if err != nil {
 			fmt.Println("Ошибка сериализации")
 			return err
@@ -113,27 +112,32 @@ func (t *Tracker) Save() error {
 
 func (t *Tracker) AddTimer(name string, minutes string) error {
 
-	duration := domain.TimerDuration{String: minutes}
-
-	var err error
-
-	duration.Number, err = strconv.Atoi(duration.String)
+	duration := domain.TimerDuration{}
+	dur, err := time.ParseDuration(minutes + "m")
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("duration parsing error")
 	}
-	duration.Number = duration.Number * 60
-	duration.String = strconv.Itoa(duration.Number)
-	duration.Duration = time.Duration(duration.Number)
+
+	duration.Duration = dur
+
+	// duration.Number, err = strconv.Atoi(duration.String)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// duration.Number = duration.Number * 60
+	// duration.String = strconv.Itoa(duration.Number)
+	// duration.Duration = time.Duration(duration.Number)
 
 	id := fmt.Sprintf("%d", time.Now().UnixNano())
-	startTime := time.Now().Format("2006-01-02 15:04:05.999999999 -0700 MST")
+	startTime := time.Now()
+	endTime := startTime.Add(duration.Duration)
 
 	newTimer := domain.Timer{
-		ID:       id,
-		Start:    startTime,
-		Duration: duration.String,
-		Status:   "running",
-		Name:     name,
+		ID:        id,
+		Name:      name,
+		Duration:  duration.Duration,
+		StartedAt: startTime,
+		StoppedAt: endTime,
 	}
 
 	// t.Timers = append(t.Timers, newTimer)
@@ -146,26 +150,38 @@ func (t *Tracker) AddTimer(name string, minutes string) error {
 
 func (t *Tracker) Stop(name string) error {
 
-	t.Timers[name].Status = "stopped"
-	fmt.Printf("The timer %s has been stopped!\n", name)
-	return nil
+	_, ok := t.Timers[name]
+	if ok {
+		nowTime := time.Now()
+		if nowTime.Before(t.Timers[name].StoppedAt) {
+			t.Timers[name].StoppedAt = nowTime
+			fmt.Printf("The timer %s has been stopped!\n", name)
+			return nil
+		} else {
+			return fmt.Errorf("the timer is already stopped")
+		}
+	} else {
+		return fmt.Errorf("the timer is not found")
+	}
 }
 
-func (t *Tracker) Status(name string) {
+func (t *Tracker) Status(name string) error {
 
 	_, ok := t.Timers[name]
 	if ok {
-		fmt.Printf("The timer %s is now %s\n", t.Timers[name].Name, t.Timers[name].Status)
-		if t.Timers[name].Status == "running" {
-			startTime, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", t.Timers[name].Start)
-			if err != nil {
-				log.Fatal(err)
-			}
-			now := time.Now()
-			diff := now.Sub(startTime).Round(time.Second).String()
-			fmt.Printf("%v from the beggining\n", diff)
+		nowTime := time.Now()
+		if nowTime.Before(t.Timers[name].StoppedAt) {
+			fmt.Printf("The timer %s is now running\n", t.Timers[name].Name)
+			timeLeft := t.Timers[name].StoppedAt.Sub(nowTime)
+			fmt.Printf("Осталось до конца таймера: %s\n", timeLeft)
+			elapsed := nowTime.Sub(t.Timers[name].StartedAt)
+			fmt.Printf("Прошло с запуска таймера: %s\n", elapsed)
+			return nil
+		} else {
+			return fmt.Errorf("the timer is already stopped")
 		}
+
 	} else {
-		fmt.Println("The timer is not found")
+		return fmt.Errorf("the timer is not found")
 	}
 }

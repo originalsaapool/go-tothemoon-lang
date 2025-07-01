@@ -29,8 +29,10 @@ var stopCmd = &cobra.Command{
 
 		name := args[0]
 
-		tracker.Stop(name)
-
+		err = tracker.Stop(name)
+		if err != nil {
+			log.Fatal(err)
+		}
 		err = tracker.Save()
 		if err != nil {
 			log.Fatal(err)

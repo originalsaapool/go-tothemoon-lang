@@ -27,6 +27,9 @@ var statusCmd = &cobra.Command{
 
 		name := args[0]
 
-		tracker.Status(name)
+		err = tracker.Status(name)
+		if err != nil {
+			log.Fatal(err)
+		}
 	},
 }
