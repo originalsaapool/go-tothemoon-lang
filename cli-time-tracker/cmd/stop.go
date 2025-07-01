@@ -20,7 +20,7 @@ var stopCmd = &cobra.Command{
 	Long:  `You can stop timer using this command`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		tracker := tracker.NewTracker("config/timers.json")
+		tracker := tracker.NewTracker()
 
 		err := tracker.Load()
 		if err != nil {

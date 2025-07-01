@@ -15,10 +15,10 @@ type Tracker struct {
 	StoragePath string
 }
 
-func NewTracker(filepath string) *Tracker {
+func NewTracker() *Tracker {
 	return &Tracker{
 		Timers:      make(map[string]*domain.Timer),
-		StoragePath: filepath,
+		StoragePath: "config/timers.json",
 	}
 }
 
@@ -111,7 +111,7 @@ func (t *Tracker) Save() error {
 	return nil
 }
 
-func (t *Tracker) AddTimer(name string, minutes string) {
+func (t *Tracker) AddTimer(name string, minutes string) error {
 
 	duration := domain.TimerDuration{String: minutes}
 
@@ -141,12 +141,14 @@ func (t *Tracker) AddTimer(name string, minutes string) {
 
 	fmt.Println("The timer has started!")
 
+	return nil
 }
 
-func (t *Tracker) Stop(name string) {
+func (t *Tracker) Stop(name string) error {
 
 	t.Timers[name].Status = "stopped"
 	fmt.Printf("The timer %s has been stopped!\n", name)
+	return nil
 }
 
 func (t *Tracker) Status(name string) {
