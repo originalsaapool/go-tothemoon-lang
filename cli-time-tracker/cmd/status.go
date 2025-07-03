@@ -18,7 +18,7 @@ var statusCmd = &cobra.Command{
 	Long:  `Show status by timer id (use id as a flag)`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		tracker := tracker.NewTracker("config/timers.json")
+		tracker := tracker.NewTracker()
 
 		err := tracker.Load()
 		if err != nil {
@@ -27,6 +27,9 @@ var statusCmd = &cobra.Command{
 
 		name := args[0]
 
-		tracker.Status(name)
+		err = tracker.Status(name)
+		if err != nil {
+			log.Fatal(err)
+		}
 	},
 }

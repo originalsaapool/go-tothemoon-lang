@@ -22,7 +22,7 @@ var addCmd = &cobra.Command{
 	Long:  `You can add timer using this command`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		tracker := tracker.NewTracker("config/timers.json")
+		tracker := tracker.NewTracker()
 
 		err := tracker.Load()
 		if err != nil {
